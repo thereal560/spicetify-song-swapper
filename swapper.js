@@ -2,14 +2,15 @@
 
 (async function extension() {
 
-  if (!(Spicetify.Player && Spicetify.Platform)) {
-    setTimeout(extension, 3000);
+  if (!(Spicetify.Player && Spicetify.Platform && Spicetify.ReactJSX)) {
+    setTimeout(extension, 300);
     return;
   }
 
   Spicetify.Player.addEventListener('songchange', (e) => { checkTrack(); });
 
   getLocal();
+  regReload();
   main();
 })();
 
@@ -58,4 +59,28 @@ function checkTrack() {
       }
     }
   }
+}
+
+function regReload() {
+
+  const reloadButton = new Spicetify.ContextMenu.Item(
+    "Reload list of local tracks",
+    reloadLocalTracks,
+    checkIfLocalFiles,
+    Spicetify.SVGIcons["repeat"],
+    false,
+  );
+
+  reloadButton.register();
+}
+
+function reloadLocalTracks() {
+  getLocal();
+  Spicetify.showNotification("Reloaded local tracks.");
+}
+
+function checkIfLocalFiles(uri) {
+  const uriObj = Spicetify.URI.fromString(uri[0]);
+  if (uriObj.category == 'local-files') { return true; }
+  return false;
 }
