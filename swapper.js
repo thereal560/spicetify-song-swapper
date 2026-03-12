@@ -1,7 +1,4 @@
-
-
 (async function extension() {
-
   if (!(Spicetify.Player && Spicetify.Platform && Spicetify.ReactJSX)) {
     setTimeout(extension, 300);
     return;
@@ -10,7 +7,7 @@
   Spicetify.Player.addEventListener('songchange', (e) => { checkTrack(); });
 
   getLocal();
-  regReload();
+  regMenuItems();
   main();
 })();
 
@@ -19,7 +16,6 @@ function main() {
 }
 
 async function getLocal() {
-
   if (!Spicetify.Platform.LocalFilesAPI) {
     setTimeout(getLocal, 300);
     return;
@@ -42,7 +38,6 @@ async function getLocal() {
 }
 
 function checkTrack() {
-
   const track = Spicetify.Player.data.item;
   const trackName = track.name;
   const trackArtists = track.artists.map(x => x.name);
@@ -61,8 +56,7 @@ function checkTrack() {
   }
 }
 
-function regReload() {
-
+function regMenuItems() {
   const reloadButton = new Spicetify.ContextMenu.Item(
     "Reload list of local tracks",
     reloadLocalTracks,
@@ -70,8 +64,16 @@ function regReload() {
     Spicetify.SVGIcons["repeat"],
     false,
   );
-
   reloadButton.register();
+ 
+  const listButton = new Spicetify.ContextMenu.Item(
+    "List deleted tracks",
+    listDeleted,
+    checkIfPlaylist,
+    Spicetify.SVGIcons["x"],
+    false,
+  );
+  listButton.register();
 }
 
 function reloadLocalTracks() {
@@ -79,8 +81,35 @@ function reloadLocalTracks() {
   Spicetify.showNotification("Reloaded local tracks.");
 }
 
+async function listDeleted(uri) {
+  const playlistData = await Spicetify.Platform.PlaylistAPI.getPlaylist(uri[0]);
+
+  const unplayable = playlistData.contents.items.filter(x => !x.isPlayable);
+  const unplayableNames = unplayable.map(x => x.name);
+  const unplayableArtists = unplayable.map(x => x.artists.map(y => y.name));
+  const unplayableArtistsJoined = unplayableArtists.map(x => x.join(', '));
+  
+  let preparedTracks = '';
+  for (let i = 0; i < unplayableNames.length; i++) {
+    preparedTracks += unplayableArtistsJoined[i] + ' - ' + unplayableNames[i] + '<br>';
+  }
+
+  const playlistName = playlistData.metadata.name;
+  Spicetify.PopupModal.display({
+    title: 'Deleted tracks in ' + playlistName + ':',
+    content: preparedTracks,
+    isLarge: true,
+  });
+}
+
 function checkIfLocalFiles(uri) {
   const uriObj = Spicetify.URI.fromString(uri[0]);
   if (uriObj.category == 'local-files') { return true; }
+  return false;
+}
+
+function checkIfPlaylist(uri) { 
+  const UriObj = Spicetify.URI.fromString(uri[0]);
+  if (UriObj.type == 'playlist-v2') { return true; }
   return false;
 }
